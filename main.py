@@ -38,9 +38,6 @@ class Route:
         print(f"Total distance (between {self.waypoint_count} Waypoints): {round(total_distance)}km.")
         return total_distance
 
-print("Flight Planner - Ryan Mitcham - 2023")
-print("-------------------------------------------")
-
 def validate_float(input_val : str) -> bool:
     return re.match(r'^-?\d*(\.\d+)?$', input_val) is not None        
 
@@ -98,6 +95,9 @@ def main():
     route = Route()
     build_route(route)
     print(route.calculate_distance_pythag())
+    
+print("Flight Planner - Ryan Mitcham - 2023")
+print("-------------------------------------------")
     
 input("Press ENTER to Start")
 main()
