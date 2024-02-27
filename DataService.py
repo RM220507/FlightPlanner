@@ -51,7 +51,7 @@ def fetchAircraft():
 
     aircraft = []
 
-        # Generate aircraft
+    # Generate aircraft
     aircraft.append(Aircraft("Extra 300", 159, 72, 5, 178))
     aircraft.append(Aircraft("Cessna 182", 333, 59, 10, 140))
     aircraft.append(Aircraft("BAES Hawk", 1360, 374, 10, 430))
