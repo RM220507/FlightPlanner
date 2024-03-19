@@ -1,22 +1,29 @@
+## TODO - Add comments
+
 import re
 from multimethod import multimethod
 import math
+import plotly.graph_objects as go
 
 import DataService as data
 
 DEBUG_ROUTE_CREATE = True
 DEBUG_AIRCRAFT_SELECT = True
+
 class Route:
     def __init__(self):
         self.__waypoints = []
     
     @multimethod
     def add_waypoint(self, waypoint_obj : data.Waypoint) -> None:
+        """THis is where I'd put my docstring explaining how this method works"""
         self.add_waypoint(waypoint_obj.name, math.radians(waypoint_obj.lat), math.radians(waypoint_obj.lon))
 
     @add_waypoint.register
-    def _(self, name : str, lat : float, lon : float) -> None:
-        self.__waypoints.append(data.Waypoint(name, lat, lon))
+    def _(self, name : str, lat : float, lon : float) -> data.Waypoint:
+        waypoint = data.Waypoint(name, lat, lon)
+        self.__waypoints.append(waypoint)
+        return waypoint
 
     @property
     def waypoint_count(self) -> int:
@@ -58,11 +65,34 @@ class Route:
         
         distance = 2 * 6371 * math.asin(inside_arcsin)
         return distance
+    
+    def plot(self):
+        fig = go.Figure(
+            go.Scattermapbox(
+                mode = "markers+lines",
+                lon = [math.degrees(waypoint.lon) for waypoint in self.__waypoints],
+                lat = [math.degrees(waypoint.lat) for waypoint in self.__waypoints],
+                marker = {"size" : 10}
+            )
+        )
+        
+        fig.update_layout(
+            margin ={'l':0,'t':0,'b':0,'r':0},
+            mapbox = {
+                'center': {'lon': 0, 'lat': 0},
+                'style': "open-street-map",
+                'center': {'lon': 0, 'lat': 0},
+                'zoom': 1
+            }
+        )
+        
+        fig.show()
 
 def validate_float(input_val : str) -> bool:
     return re.match(r'^-?\d*(\.\d+)?$', input_val) is not None
 
 def input_float(prompt : str, min_val : float=float("-inf"), max_val : float=float("inf")) -> float:
+    """Force a user to keep inputting a float, until it has a valid structure between the bounds specified."""
     input_val = ""
     valid = False
     while not valid:
@@ -80,6 +110,19 @@ def input_bool(prompt : str, condition_val : str) -> bool:
 
     return input_val.strip().upper() == condition_val.upper()
 
+def input_int(prompt : str, min_val : float = float("-inf"), max_val : float = float("inf")) -> int:
+    input_val = ""
+    valid = False
+    while not valid:
+        input_val = input(prompt)
+        
+        if input_val.isdigit() and min_val <= int(input_val) <= max_val:
+            valid = True
+        else:
+            print("Not a valid input. Try again.")
+            
+    return int(input_val)
+
 def get_lat_lon() -> float | float:
     lat_input = input_float("Latitiude (North is positive): ", -90, 90)
     lon_input = input_float("Longitude (East is positive): ", -180, 180)
@@ -94,16 +137,21 @@ def build_route(route : Route) -> None:
             print("20 Waypoints Added. No more allowed.")
             break
         
-        lat, lon = get_lat_lon()
-        
-        default_name = f"Route Waypoint{route.waypoint_count + 1}"
-        print(f"Default Waypoint name: {default_name}")
-        name = input("Name of Waypoint (leave blank to use default): ")
-        if name == "":
-            name = default_name
+        if input_bool("Use [P]re-determined or [C]ustom Waypoint? ", "C"):
+            lat, lon = get_lat_lon()
+            
+            default_name = f"Route Waypoint {route.waypoint_count + 1}"
+            print(f"Default Waypoint name: {default_name}")
+            name = input("Name of Waypoint (leave blank to use default): ")
+            if name == "":
+                name = default_name
 
-        route.add_waypoint(name, math.radians(lat), math.radians(lon))
-        print(f"Added Waypoint (Latitude: {lat}; Longitude: {lon}) as {name}")
+            waypoint_to_add = route.add_waypoint(name, math.radians(lat), math.radians(lon))
+        else:
+            waypoint_to_add = get_waypoint()
+            route.add_waypoint(waypoint_to_add)
+        
+        print(f"Added Waypoint (Latitude: {waypoint_to_add.lat}; Longitude: {waypoint_to_add.lon}) as {waypoint_to_add.name}")
 
         if route.waypoint_count != 1:
             done_adding = input_bool("Add more waypoints? (enter DONE to exit): ", "DONE")
@@ -134,14 +182,22 @@ def select_aircraft_from_list() -> data.Aircraft:
     return select_aircraft
 
 def calculate_flight_info(aircraft : data.Aircraft, distance : int) -> bool | float | float:
+    print(f"Using Aircraft: {aircraft.name}")
     flight_possible = distance < aircraft.maxRange
     
-    #! SOMETHING ISN'T WORKING HERE
     flight_time = ((distance * 1000) / aircraft.cruiseSpeed) / 3600
     
     fuel_required = aircraft.burn * flight_time
     
     return flight_possible, round(flight_time, 2), round(fuel_required)
+
+def get_waypoint() -> data.Waypoint:
+    waypoints = data.fetchWaypoints()
+    for i, waypoint in enumerate(waypoints):
+        print(f"{(i + 1):02} - {waypoint.name}")
+        
+    waypoint_id = input_int("Enter a waypoint index: ", min_val=0, max_val=len(waypoints) - 1)
+    return waypoints[waypoint_id]
         
 def main():
     route = Route()
@@ -153,7 +209,7 @@ def main():
         route.add_waypoint(data.fetchWaypoints()[1])
         route.add_waypoint(data.fetchWaypoints()[2])
     
-    if input_bool("Use [P]ythagoras or [H]aversine for distance calculations?", "P"):
+    if input_bool("Use [P]ythagoras or [H]aversine for distance calculations? ", "P"):
         distance = route.calculate_distance(use_haversine=False)
     else:
         distance = route.calculate_distance()
@@ -168,6 +224,9 @@ def main():
     print(f"Flight Possible: {flight_possible}")
     print(f"Fuel Load: {fuel_required}/{aircraft.capacity}")
     print(f"Flight Time: {flight_time} hours")
+    
+    route.plot()
+    input("Press ENTER to Exit")
     
 print("Flight Planner - Ryan Mitcham - 2023")
 print("-------------------------------------------")

@@ -1,6 +1,36 @@
 {
     "workbench.colorCustomizations": {
-        "minimap.background": "#00000000",
-        "scrollbar.shadow": "#00000000"
-    }
+      "minimap.background": "#00000000",
+      "scrollbar.shadow": "#00000000"
+    },
+    "todo-tree.customHighlight": {
+        "TODO": {
+          "icon": "check",
+          "type": "line",
+          "iconColour": "yellow",
+          "foreground": "red",
+          "background": "yellow",
+        },
+        "FIXME": {
+          "icon": "beaker",
+          "iconColour": "red",
+          "foreground": "white",
+          "background": "red"
+        }
+      },
+      "todo-tree.highlights.customHighlight": {
+        "TODO": {
+          "icon": "check",
+          "type": "line",
+          "iconColour": "yellow",
+          "foreground": "red",
+          "background": "yellow"
+        },
+        "FIXME": {
+          "icon": "beaker",
+          "iconColour": "red",
+          "foreground": "white",
+          "background": "red"
+        }
+      },
 }
