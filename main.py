@@ -16,11 +16,12 @@ class Route:
     
     @multimethod
     def add_waypoint(self, waypoint_obj : data.Waypoint) -> None:
-        """THis is where I'd put my docstring explaining how this method works"""
+        """Add a waypoint object to the route (converting angles to radians)."""
         self.add_waypoint(waypoint_obj.name, math.radians(waypoint_obj.lat), math.radians(waypoint_obj.lon))
 
     @add_waypoint.register
     def _(self, name : str, lat : float, lon : float) -> data.Waypoint:
+        """Add a waypoint to the route from constituent parts."""
         waypoint = data.Waypoint(name, lat, lon)
         self.__waypoints.append(waypoint)
         return waypoint
@@ -30,23 +31,32 @@ class Route:
         return len(self.__waypoints)
     
     def calculate_distance(self, use_haversine : bool = True) -> float:
+        """Calculate the distance between all the waypoints in the route.
+
+        Args:
+            use_haversine (bool, optional): Determines whether to use the haversine formula or pythagoras for distance calculations. Defaults to True.
+
+        Returns:
+            float: Returns the distance, accurate to the nearest kilometer.
+        """
         total_distance = 0
         print("Calculating distance.")
         for i, waypoint in enumerate(self.__waypoints[:-1]):            
             next_point = self.__waypoints[i + 1]
             
             if use_haversine:
-                distance = self.calculate_dist_haversine(waypoint, next_point)
+                distance = self.calculate_dist_haversine(waypoint, next_point) # use haversine if specified
             else:
-                distance = self.calculate_dist_pythag(waypoint, next_point)
+                distance = self.calculate_dist_pythag(waypoint, next_point) # otherwise, use pythag
             
-            print(f"Distance ({waypoint.name} -> {next_point.name}): {round(distance)}km.")
+            print(f"Distance ({waypoint.name} -> {next_point.name}): {round(distance)}km.") # display the display between each waypoint pair
             total_distance += distance
             
         print(f"Total distance (between {self.waypoint_count} Waypoints): {round(total_distance)}km.")
         return round(total_distance)
     
     def calculate_dist_pythag(self, waypoint : data.Waypoint, next_point : data.Waypoint) -> float:
+        """Use pythagoras to calculate the distance between two waypoints."""
         enclosed_angle = math.cos((waypoint.lat + next_point.lat) / 2)
         x = (next_point.lon - waypoint.lon) * enclosed_angle
         y = next_point.lat - next_point.lat
@@ -55,6 +65,7 @@ class Route:
         return distance
     
     def calculate_dist_haversine(self, waypoint : data.Waypoint, next_point : data.Waypoint) -> float:
+        """Use the haversine formula to calculate the distance between two waypoints."""
         haversine_lat = (math.sin((next_point.lat - waypoint.lat) / 2)) ** 2
         
         convex_combination = math.cos(waypoint.lat) * math.cos(next_point.lat)
@@ -67,6 +78,7 @@ class Route:
         return distance
     
     def plot(self):
+        """Use plotly to plot the waypoints on a world map."""
         fig = go.Figure(
             go.Scattermapbox(
                 mode = "markers+lines",
@@ -89,10 +101,27 @@ class Route:
         fig.show()
 
 def validate_float(input_val : str) -> bool:
+    """Test if a given string is a valid float.
+
+    Args:
+        input_val (str): the string to run the test on.
+
+    Returns:
+        bool: returns True if input_val is a valid float.
+    """
     return re.match(r'^-?\d*(\.\d+)?$', input_val) is not None
 
 def input_float(prompt : str, min_val : float=float("-inf"), max_val : float=float("inf")) -> float:
-    """Force a user to keep inputting a float, until it has a valid structure between the bounds specified."""
+    """Keep asking for user input, until the user enters a valid float between the lower and upper bounds supplied (inclusive).
+
+    Args:
+        prompt (str): The prompt to display to the user.
+        min_val (float, optional): The lower bound for a valid input (inclusive). Defaults to float("-inf").
+        max_val (float, optional): The upper bound for a valid input (inclusive). Defaults to float("inf").
+
+    Returns:
+        float: Returns the float that was inputted by the user.
+    """
     input_val = ""
     valid = False
     while not valid:
@@ -106,11 +135,30 @@ def input_float(prompt : str, min_val : float=float("-inf"), max_val : float=flo
     return float(input_val)
 
 def input_bool(prompt : str, condition_val : str) -> bool:
+    """Compare a user input to a condition, and return an appropriate boolean. NOT case-sensitive
+
+    Args:
+        prompt (str): The prompt to display to the user.
+        condition_val (str): The value to test against.
+
+    Returns:
+        bool: Returns if the input is equal to condition_val
+    """
     input_val = input(prompt)
 
     return input_val.strip().upper() == condition_val.upper()
 
 def input_int(prompt : str, min_val : float = float("-inf"), max_val : float = float("inf")) -> int:
+    """Keep asking for user input, until the user enters a valid integer between the lower and upper bounds supplied (inclusive).
+
+    Args:
+        prompt (str): The prompt to display to the user.
+        min_val (float, optional): The lower bound for a valid input (inclusive). Defaults to float("-inf").
+        max_val (float, optional): The upper bound for a valid input (inclusive). Defaults to float("inf").
+
+    Returns:
+        int: Returns the integer that was inputted by the user.
+    """
     input_val = ""
     valid = False
     while not valid:
@@ -124,6 +172,11 @@ def input_int(prompt : str, min_val : float = float("-inf"), max_val : float = f
     return int(input_val)
 
 def get_lat_lon() -> float | float:
+    """Get the user to input a lat, lon coordinate pair
+
+    Returns:
+        float | float: Inputted lat, inputted lon
+    """
     lat_input = input_float("Latitiude (North is positive): ", -90, 90)
     lon_input = input_float("Longitude (East is positive): ", -180, 180)
 
@@ -171,7 +224,7 @@ def select_aircraft_from_list() -> data.Aircraft:
         aircraft_names.append(aircraft.name.upper())
         
     valid = False
-    while not valid:
+    while not valid: # keep entering aircraft name until a valid one is entered
         aircraft_name_input = input("Enter name of desired aircraft: ")
         if aircraft_name_input.upper() in aircraft_names:
             valid = True
@@ -205,6 +258,7 @@ def main():
     if not DEBUG_ROUTE_CREATE:
         build_route(route)
     else:
+        # if debug mode is on, use a predetermined route
         route.add_waypoint(data.fetchWaypoints()[0])
         route.add_waypoint(data.fetchWaypoints()[1])
         route.add_waypoint(data.fetchWaypoints()[2])
@@ -217,6 +271,7 @@ def main():
     if not DEBUG_AIRCRAFT_SELECT:
         aircraft = select_aircraft_from_list()
     else:
+        # if debug mode is on, use the first aircraft
         aircraft = data.fetchAircraft()[0]
     
     flight_possible, flight_time, fuel_required = calculate_flight_info(aircraft, distance)
